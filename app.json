@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "medAdhere",
+    "slug": "medAdhere",
+    "version": "1.0.0",
+    "splash": {
+      "image": "./images/medAdhere.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#f7f8fa"
+    }
+  }
+}
