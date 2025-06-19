@@ -7,6 +7,9 @@
       "image": "./images/medAdhere.png",
       "resizeMode": "contain",
       "backgroundColor": "#f7f8fa"
-    }
+    },
+    "plugins": [
+      "expo-notifications"
+    ]
   }
 }

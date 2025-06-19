@@ -3,8 +3,8 @@ import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet}
 import { Picker } from '@react-native-picker/picker';
 import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
-
-const API_URL = 'http://your-api-url.com';
+import md5 from "react-native-md5";
+import { API_URL } from '../../services/api';
 
 const SignupScreen = ({ navigation }) => {
   const [name, setName] = useState('');
@@ -13,6 +13,8 @@ const SignupScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [language_pref,setLanguage_pref] = useState();
+  const [phone,setPhone] = useState();
 
   const handleSignup = async () => {
     if (!name || !email || !password) {
@@ -23,10 +25,11 @@ const SignupScreen = ({ navigation }) => {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/signup`, {
+     const password_harsh = md5.hex_md5(password);
+      const response = await fetch(`${API_URL}/user/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role }),
+        body: JSON.stringify({ name, email, password_harsh, role, phone, language_pref }),
       });
 
       const data = await response.json();
@@ -39,6 +42,7 @@ const SignupScreen = ({ navigation }) => {
       }
 
     } catch (err) {
+      console.log(err)
       showToast('error', 'Network Error', 'Please check your connection.');
     } finally {
       setLoading(false);
@@ -63,6 +67,16 @@ const SignupScreen = ({ navigation }) => {
         placeholderTextColor="#999"
         value={name}
         onChangeText={setName}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Phone"
+        placeholderTextColor="#999"
+        keyboardType="keypad"
+        autoCapitalize="none"
+        value={phone}
+        onChangeText={setPhone}
       />
 
       <TextInput
@@ -107,6 +121,19 @@ const SignupScreen = ({ navigation }) => {
         </Picker>
       </View>
 
+      <View style={styles.pickerContainer}>
+        <Picker
+          selectedValue={language_pref}
+          onValueChange={setLanguage_pref}
+          style={{ color: '#333' }}
+        >
+          <Picker.Item label="Select Your Preferred Language" value="" />
+          <Picker.Item label="English" value="english" />
+          <Picker.Item label="Spanish" value="spanish" />
+          <Picker.Item label="Chinesse (Mandarin)" value="mandarin" />
+        </Picker>
+      </View>
+
       <TouchableOpacity style={styles.button} onPress={handleSignup} disabled={loading}>
         {loading ? (
           <ActivityIndicator color="#fff" />
@@ -118,7 +145,6 @@ const SignupScreen = ({ navigation }) => {
       <TouchableOpacity onPress={() => navigation.replace('Login')}>
         <Text style={styles.link}>Already have an account? Login</Text>
       </TouchableOpacity>
-
       <Toast position="top" />
     </View>
   );
