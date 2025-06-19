@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet, Picker } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet} from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
 

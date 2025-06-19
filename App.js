@@ -1,9 +1,10 @@
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
-import LoginScreen from "./screens/LoginScreen";
-import SignupScreen from "./screens/SignupScreen";
-import PatientHomeScreen from "./screens/PatientHomeScreen";
+import LoginScreen from "./pages/screens/auth/LoginScreen";
+import SignupScreen from "./pages/screens/auth/SignUpScreen";
+import SplashScreen from "./pages/screens/auth/SplashScreen";
+// import PatientHomeScreen from "./screens/PatientHomeScreen";
 import Toast from 'react-native-toast-message';
 
 
