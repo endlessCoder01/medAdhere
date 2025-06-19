@@ -3,15 +3,16 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import * as Notifications from 'expo-notifications';
 import Toast from 'react-native-toast-message';
 
-const DoctorHomeScreen = () => {
-  const patients = [
-    { id: 1, name: 'John Doe', condition: 'Hypertension' },
-    { id: 2, name: 'Jane Smith', condition: 'Diabetes' },
-    { id: 3, name: 'Sam Moyo', condition: 'Asthma' },
+const RemindersScreen = () => {
+  const reminders = [
+    { id: 1, title: 'Morning Medication', time: '08:00 AM' },
+    { id: 2, title: 'Evening Medication', time: '08:00 PM' },
+    { id: 3, title: 'Blood Pressure Check', time: '07:00 AM' },
   ];
 
   useEffect(() => {
-    sendNotification("Med Adhere Update", "2 patients missed doses today.");
+    // Simulate a notification when user opens this screen
+    sendNotification("Med Adhere Reminder", "You have a medication due soon.");
   }, []);
 
   const sendNotification = async (title, body) => {
@@ -21,25 +22,26 @@ const DoctorHomeScreen = () => {
     });
   };
 
+  const handleReminderPress = (reminder) => {
+    Toast.show({
+      type: 'success',
+      text1: 'Reminder Acknowledged',
+      text2: `${reminder.title} at ${reminder.time}`,
+    });
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Welcome, Doctor</Text>
-      <Text style={styles.subtitle}>Your Patients</Text>
+      <Text style={styles.title}>Reminders</Text>
 
-      {patients.map((patient) => (
+      {reminders.map((reminder) => (
         <TouchableOpacity
-          key={patient.id}
+          key={reminder.id}
           style={styles.card}
-          onPress={() => {
-            Toast.show({
-              type: 'info',
-              text1: 'Patient Selected',
-              text2: `Viewing ${patient.name}'s profile.`,
-            });
-          }}
+          onPress={() => handleReminderPress(reminder)}
         >
-          <Text style={styles.cardTitle}>{patient.name}</Text>
-          <Text style={styles.cardSub}>{patient.condition}</Text>
+          <Text style={styles.cardTitle}>{reminder.title}</Text>
+          <Text style={styles.cardSub}>Time: {reminder.time}</Text>
         </TouchableOpacity>
       ))}
 
@@ -47,6 +49,8 @@ const DoctorHomeScreen = () => {
     </ScrollView>
   );
 };
+
+export default RemindersScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -58,12 +62,6 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: '#4e8cff',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
     marginBottom: 20,
   },
   card: {
@@ -71,10 +69,6 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 10,
     marginBottom: 15,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 5,
     elevation: 3,
   },
   cardTitle: {
@@ -88,5 +82,3 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
 });
-
-export default DoctorHomeScreen;

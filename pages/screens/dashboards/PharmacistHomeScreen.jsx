@@ -1,35 +1,46 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import Toast from 'react-native-toast-message';
 
-const PharmacistHomeScreen = ({ navigation }) => {
-  const showFeatureToast = (feature) => {
-    Toast.show({
-      type: 'info',
-      text1: 'Coming Soon',
-      text2: `${feature} will be available soon!`,
+const PharmacistHomeScreen = () => {
+  const prescriptions = [
+    { id: 1, patient: 'Grace Mutasa', medication: 'Amoxicillin 500mg' },
+    { id: 2, patient: 'Peter Banda', medication: 'Ibuprofen 400mg' },
+  ];
+
+  useEffect(() => {
+    sendNotification("Med Adhere Pharmacy", "New prescription received.");
+  }, []);
+
+  const sendNotification = async (title, body) => {
+    await Notifications.scheduleNotificationAsync({
+      content: { title, body },
+      trigger: null,
     });
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Welcome, Pharmacist</Text>
+      <Text style={styles.subtitle}>Recent Prescriptions</Text>
 
-      <TouchableOpacity style={styles.card} onPress={() => showFeatureToast('Patient Medications')}>
-        <Text style={styles.cardText}>Patient Medications</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.card} onPress={() => showFeatureToast('Inventory')}>
-        <Text style={styles.cardText}>Inventory</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.card} onPress={() => showFeatureToast('Reports')}>
-        <Text style={styles.cardText}>Reports</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.card} onPress={() => showFeatureToast('Messages')}>
-        <Text style={styles.cardText}>Messages</Text>
-      </TouchableOpacity>
+      {prescriptions.map((rx) => (
+        <TouchableOpacity
+          key={rx.id}
+          style={styles.card}
+          onPress={() => {
+            Toast.show({
+              type: 'info',
+              text1: 'Prescription Selected',
+              text2: `Viewing ${rx.patient}'s prescription.`,
+            });
+          }}
+        >
+          <Text style={styles.cardTitle}>{rx.patient}</Text>
+          <Text style={styles.cardSub}>{rx.medication}</Text>
+        </TouchableOpacity>
+      ))}
 
       <Toast position="top" />
     </ScrollView>
@@ -38,36 +49,43 @@ const PharmacistHomeScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 50,
-    paddingHorizontal: 20,
+    padding: 20,
     backgroundColor: '#f7f8fa',
     flexGrow: 1,
-    alignItems: 'center',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#4e8cff',
-    marginBottom: 30,
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 20,
   },
   card: {
-    width: '100%',
     backgroundColor: '#fff',
-    padding: 20,
+    padding: 15,
     borderRadius: 10,
     marginBottom: 15,
-    alignItems: 'center',
     shadowColor: '#000',
     shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 2 },
     shadowRadius: 5,
     elevation: 3,
   },
-  cardText: {
+  cardTitle: {
     fontSize: 18,
+    fontWeight: '600',
     color: '#333',
   },
+  cardSub: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 5,
+  },
 });
-
 
 export default PharmacistHomeScreen;
