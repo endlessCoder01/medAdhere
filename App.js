@@ -19,6 +19,7 @@ import ReportsScreen from "./pages/screens/shared/Reports";
 
 import Toast from 'react-native-toast-message';
 import ChangePasswordScreen from "./pages/screens/shared/ChangePassword";
+import ChatScreen from "./pages/screens/shared/ChatScreen";
 
 
 const Stack = createStackNavigator();
@@ -46,6 +47,7 @@ export default function App() {
       <Stack.Screen name="ChangeLanguage" component={ChangeLanguageScreen} />
       <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
       <Stack.Screen name="Reports" component={ReportsScreen} />
+      <Stack.Screen name="ChatScreen" component={ChatScreen} />
 
       </Stack.Navigator>
       </NavigationContainer>
