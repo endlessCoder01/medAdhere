@@ -1,17 +1,19 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import Toast from 'react-native-toast-message';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
+
+import DoctorFeaturesScreen from '../caregiver_doc_pharm_features/DoctorFeaturesScreen';
+import MessagesScreen from '../shared/MessagesScreen';
+import SettingsScreen from '../shared/Settings';
+
+const Tab = createBottomTabNavigator();
 
 const DoctorHomeScreen = () => {
-  const patients = [
-    { id: 1, name: 'John Doe', condition: 'Hypertension' },
-    { id: 2, name: 'Jane Smith', condition: 'Diabetes' },
-    { id: 3, name: 'Sam Moyo', condition: 'Asthma' },
-  ];
-
   useEffect(() => {
-    sendNotification("Med Adhere Update", "2 patients missed doses today.");
+    sendNotification("Med Adhere Doctor", "You have new patient updates.");
   }, []);
 
   const sendNotification = async (title, body) => {
@@ -22,71 +24,34 @@ const DoctorHomeScreen = () => {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Welcome, Doctor</Text>
-      <Text style={styles.subtitle}>Your Patients</Text>
-
-      {patients.map((patient) => (
-        <TouchableOpacity
-          key={patient.id}
-          style={styles.card}
-          onPress={() => {
-            Toast.show({
-              type: 'info',
-              text1: 'Patient Selected',
-              text2: `Viewing ${patient.name}'s profile.`,
-            });
-          }}
-        >
-          <Text style={styles.cardTitle}>{patient.name}</Text>
-          <Text style={styles.cardSub}>{patient.condition}</Text>
-        </TouchableOpacity>
-      ))}
-
+    <>
+      <Tab.Navigator
+        screenOptions={({ route }) => ({
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => {
+            let iconName;
+            if (route.name === 'Patients') iconName = 'people';
+            else if (route.name === 'Messages') iconName = 'chatbubble';
+            else if (route.name === 'Settings') iconName = 'settings';
+            else iconName = 'ellipse';
+            return <Ionicons name={iconName} size={size} color={color} />;
+          },
+        })}
+      >
+        <Tab.Screen name="Patients" component={DoctorFeaturesScreen} />
+        <Tab.Screen name="Messages" component={MessagesScreen} />
+        <Tab.Screen name="Settings" component={SettingsScreen} />
+      </Tab.Navigator>
       <Toast position="top" />
-    </ScrollView>
+    </>
   );
 };
 
+export default DoctorHomeScreen;
+
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
     backgroundColor: '#f7f8fa',
     flexGrow: 1,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#4e8cff',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 20,
-  },
-  card: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-  cardSub: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 5,
-  },
 });
-
-export default DoctorHomeScreen;

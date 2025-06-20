@@ -42,6 +42,7 @@ const LoginScreen = ({ navigation }) => {
       });
 
       const data = await response.json();
+      // console.log("stored", data)
 
       AsyncStorage.setItem("userInfo", JSON.stringify(data));
 

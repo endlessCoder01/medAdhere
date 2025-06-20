@@ -1,16 +1,19 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import Toast from 'react-native-toast-message';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
+
+import CaregiverFeaturesScreen from '../caregiver_doc_pharm_features/CaregiverFeaturesScreen';
+import MessagesScreen from '../shared/MessagesScreen';
+import SettingsScreen from '../shared/Settings';
+
+const Tab = createBottomTabNavigator();
 
 const CaregiverHomeScreen = () => {
-  const supportedPatients = [
-    { id: 1, name: 'Alice Ncube', adherence: 'Good' },
-    { id: 2, name: 'Brian Dube', adherence: 'Needs Attention' },
-  ];
-
   useEffect(() => {
-    sendNotification("Med Adhere Alert", "One patient needs assistance.");
+    sendNotification("Med Adhere Caregiver", "Patients need your attention.");
   }, []);
 
   const sendNotification = async (title, body) => {
@@ -21,71 +24,34 @@ const CaregiverHomeScreen = () => {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Welcome, Caregiver</Text>
-      <Text style={styles.subtitle}>Patients You Support</Text>
-
-      {supportedPatients.map((p) => (
-        <TouchableOpacity
-          key={p.id}
-          style={styles.card}
-          onPress={() => {
-            Toast.show({
-              type: 'info',
-              text1: 'Patient Selected',
-              text2: `Monitoring ${p.name}.`,
-            });
-          }}
-        >
-          <Text style={styles.cardTitle}>{p.name}</Text>
-          <Text style={styles.cardSub}>Adherence: {p.adherence}</Text>
-        </TouchableOpacity>
-      ))}
-
+    <>
+      <Tab.Navigator
+        screenOptions={({ route }) => ({
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => {
+            let iconName;
+            if (route.name === 'Patients') iconName = 'heart';
+            else if (route.name === 'Messages') iconName = 'chatbubble';            
+            else if (route.name === 'Settings') iconName = 'settings';
+            else iconName = 'ellipse';
+            return <Ionicons name={iconName} size={size} color={color} />;
+          },
+        })}
+      >
+        <Tab.Screen name="Patients" component={CaregiverFeaturesScreen} />
+        <Tab.Screen name="Messages" component={MessagesScreen} />
+        <Tab.Screen name="Settings" component={SettingsScreen} />
+      </Tab.Navigator>
       <Toast position="top" />
-    </ScrollView>
+    </>
   );
 };
 
+export default CaregiverHomeScreen;
+
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
     backgroundColor: '#f7f8fa',
     flexGrow: 1,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#4e8cff',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 20,
-  },
-  card: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-  cardSub: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 5,
-  },
 });
-
-export default CaregiverHomeScreen;

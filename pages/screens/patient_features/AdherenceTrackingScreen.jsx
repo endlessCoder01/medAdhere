@@ -1,105 +1,136 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, StatusBar, Dimensions, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View, Text, StyleSheet, ScrollView, ActivityIndicator,
+  TouchableOpacity, Modal, StatusBar, Dimensions, Platform
+} from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import Toast from 'react-native-toast-message';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
-const initialRecords = [
-  { id: 1, med: 'Aspirin', date: '2025-06-18', status: 'Taken' },
-  { id: 2, med: 'Metformin', date: '2025-06-18', status: 'Missed' },
-  { id: 3, med: 'Lisinopril', date: '2025-06-17', status: 'Taken' },
-];
-
 export default function AdherenceTrackingScreen() {
-  const [records] = useState(initialRecords);
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
-  // FAB Animation
-  const [fabAnim] = useState(new Animated.Value(0));
-  const handleFabPressIn = () => {
-    Animated.spring(fabAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      friction: 4,
-      tension: 40,
-    }).start();
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('userInfo');
+      if (!userData) throw new Error('No user info');
+      const user = JSON.parse(userData);
+
+      const medRes = await fetch(`${API_URL}/medication/patient/${user.user_id}`);
+      const meds = await medRes.json();
+
+      let allRecords = [];
+
+      for (const med of meds) {
+        const adhRes = await fetch(`${API_URL}/adherence/medication/${med.medication_id}`);
+        const adhs = await adhRes.json();
+
+        adhs.forEach(a => {
+          allRecords.push({
+            record_id: a.record_id,
+            medication_name: med.name,
+            dosage: med.dosage,
+            frequency: med.frequency,
+            taken_at: a.taken_at,
+            status: a.status,
+            notes: a.notes,
+            med: med
+          });
+        });
+      }
+
+      setRecords(allRecords);
+    } catch (e) {
+      Toast.show({ type: 'error', text1: 'Error', text2: e.message || 'Failed to load data' });
+    } finally {
+      setLoading(false);
+    }
   };
-  const handleFabPressOut = () => {
-    Animated.spring(fabAnim, {
-      toValue: 0,
-      useNativeDriver: true,
-      friction: 4,
-      tension: 40,
-    }).start();
-    // Add functionality here
-  };
-  const fabScale = fabAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 1.13],
-  });
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f7f8fa' }}>
       <StatusBar barStyle="dark-content" />
       <BackgroundBlobs />
 
-      {/* Header */}
-      <View style={[styles.header]}>
+      <View style={styles.header}>
         <Text style={styles.title}>Adherence Tracking</Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
-        {records.map((rec, idx) => (
-          <BlurView
-            key={rec.id}
-            intensity={19}
-            tint="light"
-            style={[styles.cardWrap, shadowForIdx(idx)]}
-          >
-            <LinearGradient
-              colors={['#fff0', '#e3f0ff99']}
-              start={[0.5, 0]}
-              end={[1, 1]}
-              style={styles.card}
-            >
-              <Text style={styles.cardTitle}>{rec.med}</Text>
-              <Text style={styles.cardSub}>Date: {rec.date}</Text>
-              <StatusChip status={rec.status} />
-            </LinearGradient>
-          </BlurView>
-        ))}
-      </ScrollView>
+      {loading ? (
+        <ActivityIndicator size="large" color="#4e8cff" style={{ marginTop: 30 }} />
+      ) : (
+        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
+          {records.map((rec, idx) => (
+            <TouchableOpacity key={rec.record_id} onPress={() => setSelectedRecord(rec)}>
+              <BlurView intensity={15} tint="light" style={[styles.cardWrap]}>
+                <LinearGradient
+                  colors={['#fff0', '#e3f0ff99']}
+                  start={[0.5, 0]}
+                  end={[1, 1]}
+                  style={styles.card}
+                >
+                  <Text style={styles.cardTitle}>{rec.medication_name}</Text>
+                  <Text style={styles.cardSub}>{new Date(rec.taken_at).toLocaleDateString()}</Text>
+                  <StatusChip status={rec.status} />
+                </LinearGradient>
+              </BlurView>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
 
-      {/* FAB */}
-      <Animated.View style={[
-        styles.fab,
-        {
-          transform: [{ scale: fabScale }],
-        }
-      ]}>
-        <TouchableOpacity
-          onPressIn={handleFabPressIn}
-          onPressOut={handleFabPressOut}
-          activeOpacity={0.7}
-          accessibilityLabel="Add new record"
-        >
-          <Text style={styles.fabIcon}>＋</Text>
-        </TouchableOpacity>
-      </Animated.View>
+      {/* Modal for details */}
+      <Modal
+        visible={!!selectedRecord}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSelectedRecord(null)}
+      >
+        <View style={modalStyles.modalBackground}>
+          <View style={modalStyles.modalContainer}>
+            {selectedRecord && (
+              <>
+                <Text style={modalStyles.modalTitle}>{selectedRecord.medication_name}</Text>
+                <Text style={modalStyles.modalText}>Dosage: {selectedRecord.dosage}</Text>
+                <Text style={modalStyles.modalText}>Frequency: {selectedRecord.frequency}</Text>
+                <Text style={modalStyles.modalText}>Status: {selectedRecord.status}</Text>
+                <Text style={modalStyles.modalText}>Taken At: {new Date(selectedRecord.taken_at).toLocaleString()}</Text>
+                <Text style={modalStyles.modalText}>Notes: {selectedRecord.notes}</Text>
+                <Text style={modalStyles.modalText}>Side Effects: {selectedRecord.med.side_effects}</Text>
+                <Text style={modalStyles.modalText}>Prescribed Notes: {selectedRecord.med.notes}</Text>
+                <TouchableOpacity style={modalStyles.closeButton} onPress={() => setSelectedRecord(null)}>
+                  <Text style={modalStyles.closeButtonText}>Close</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      <Toast position="top" />
     </View>
   );
 }
 
 // Status chip
 function StatusChip({ status }) {
-  const isTaken = status === "Taken";
+  const isTaken = status.toLowerCase() === "taken";
   return (
     <View style={[
       chipStyles.chip,
       {
         backgroundColor: isTaken ? "#a3f2ca" : "#f2a3a3",
         borderColor: isTaken ? "#1dc48b" : "#e03d3d",
-        shadowColor: isTaken ? "#24e0a2aa" : "#e03d3daa"
       }
     ]}>
       <Text style={[
@@ -122,24 +153,11 @@ function BackgroundBlobs() {
         end={[1, 1]}
         style={StyleSheet.absoluteFill}
       />
-      <Animated.View style={[blobStyles.blob, blobStyles.blob1, { backgroundColor: "#4e8cff77" }]} />
-      <Animated.View style={[blobStyles.blob, blobStyles.blob2, { backgroundColor: "#1dc48b66" }]} />
-      <Animated.View style={[blobStyles.blob, blobStyles.blob3, { backgroundColor: "#e03d3d55" }]} />
+      <View style={[blobStyles.blob, blobStyles.blob1, { backgroundColor: "#4e8cff77" }]} />
+      <View style={[blobStyles.blob, blobStyles.blob2, { backgroundColor: "#1dc48b66" }]} />
+      <View style={[blobStyles.blob, blobStyles.blob3, { backgroundColor: "#e03d3d55" }]} />
     </View>
   );
-}
-
-// Shadow helper
-function shadowForIdx(idx) {
-  const offsets = [
-    { x: 0, y: 8 }, { x: 0, y: 9 }, { x: 0, y: 7 }, { x: 0, y: 6 }, { x: 0, y: 10 }
-  ];
-  return {
-    shadowOffset: offsets[idx % offsets.length],
-    shadowOpacity: 0.15,
-    shadowRadius: 18,
-    elevation: 5,
-  };
 }
 
 // Styles
@@ -161,71 +179,41 @@ const styles = StyleSheet.create({
   cardWrap: {
     borderRadius: 18,
     overflow: 'hidden',
-    marginBottom: 22,
+    marginBottom: 16,
   },
   card: {
     borderRadius: 18,
-    padding: 20,
-    minHeight: 96,
-    flexDirection: 'column',
+    padding: 16,
+    minHeight: 80,
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.75)',
   },
   cardTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    marginBottom: 6,
     color: '#243358',
   },
   cardSub: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '400',
     opacity: 0.85,
-    marginBottom: 8,
+    marginBottom: 4,
     color: '#4e8cff99',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 32,
-    right: 32,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#4e8cff',
-    elevation: 10,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.24,
-    shadowRadius: 18,
-  },
-  fabIcon: {
-    fontSize: 38,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    color: '#fff',
   },
 });
 
 const chipStyles = StyleSheet.create({
   chip: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 15,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
     borderRadius: 16,
-    borderWidth: 1.2,
-    marginTop: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: 1,
+    marginTop: 4,
   },
   chipText: {
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 0.2,
+    fontSize: 14,
+    fontWeight: '600',
   }
 });
 
@@ -234,7 +222,6 @@ const blobStyles = StyleSheet.create({
     position: 'absolute',
     opacity: 0.44,
     borderRadius: 100,
-    zIndex: 0,
   },
   blob1: {
     width: width * 0.7,
@@ -253,5 +240,42 @@ const blobStyles = StyleSheet.create({
     height: width * 0.38,
     left: -width * 0.12,
     bottom: -width * 0.15,
+  },
+});
+
+const modalStyles = StyleSheet.create({
+  modalBackground: {
+    flex: 1,
+    backgroundColor: '#0008',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#4e8cff',
+    marginBottom: 10,
+  },
+  modalText: {
+    fontSize: 16,
+    marginBottom: 5,
+    color: '#333',
+  },
+  closeButton: {
+    backgroundColor: '#4e8cff',
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 15,
+  },
+  closeButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });

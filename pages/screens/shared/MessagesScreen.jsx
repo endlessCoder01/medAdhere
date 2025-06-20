@@ -1,21 +1,32 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Animated, StatusBar, Dimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  Platform, Animated, StatusBar, Dimensions, ActivityIndicator, Modal, TextInput
+} from 'react-native';
 import Toast from 'react-native-toast-message';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
-const messages = [
-  { id: 1, sender: 'Doctor Smith', preview: 'Please remember your check-up...', unread: true },
-  { id: 2, sender: 'Pharmacist Jane', preview: 'Your prescription is ready...', unread: false },
-  { id: 3, sender: 'Nurse Amy', preview: 'Lab results are available.', unread: true },
-];
-
-export default function MessagesScreen() {
+export default function MessagesScreen({ navigation }) {
   const theme = lightTheme;
-
   const [fabAnim] = useState(new Animated.Value(0));
+  const [loading, setLoading] = useState(true);
+  const [groupedMessages, setGroupedMessages] = useState([]);
+  const [composeVisible, setComposeVisible] = useState(false);
+  const [staffList, setStaffList] = useState([]);
+  const [selectedStaff, setSelectedStaff] = useState(null);
+  const [messageContent, setMessageContent] = useState('');
+
+  useEffect(() => {
+    fetchMessages();
+    fetchStaff();
+    const interval = setInterval(fetchMessages, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleFabPressIn = () => {
     Animated.spring(fabAnim, {
@@ -33,11 +44,7 @@ export default function MessagesScreen() {
       friction: 4,
       tension: 40,
     }).start();
-    Toast.show({
-      type: 'success',
-      text1: 'Compose',
-      text2: 'Compose a new message!',
-    });
+    setComposeVisible(true);
   };
 
   const fabScale = fabAnim.interpolate({
@@ -45,65 +52,133 @@ export default function MessagesScreen() {
     outputRange: [1, 1.13],
   });
 
+  const fetchMessages = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('userInfo');
+      if (!userData) throw new Error('No user info');
+      const user = JSON.parse(userData);
+
+      const res = await fetch(`${API_URL}/message/${user.user_id}`);
+      const messages = await res.json();
+
+      const unseen = messages.filter(m => m.status === 'unseen');
+
+      const groups = {};
+
+      for (const msg of unseen) {
+        if (!groups[msg.sender_id]) {
+          const senderRes = await fetch(`${API_URL}/user/${msg.sender_id}`);
+          const sender = await senderRes.json();
+          groups[msg.sender_id] = {
+            senderName: sender.name,
+            senderId: sender.user_id,
+            count: 0,
+          };
+        }
+        groups[msg.sender_id].count += 1;
+      }
+
+      setGroupedMessages(Object.values(groups));
+    } catch (e) {
+      Toast.show({ type: 'error', text1: 'Error', text2: e.message || 'Failed to load messages' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStaff = async () => {
+    try {
+      const res = await fetch(`${API_URL}/user/staffrole`);
+      const data = await res.json();
+      setStaffList(data);
+    } catch {
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to load staff list' });
+    }
+  };
+
+  const sendMessage = async () => {
+    try {
+      if (!selectedStaff || !messageContent.trim()) {
+        Toast.show({ type: 'error', text1: 'Error', text2: 'Select a receiver and write a message.' });
+        return;
+      }
+
+      const userData = await AsyncStorage.getItem('userInfo');
+      const user = JSON.parse(userData);
+
+      await fetch(`${API_URL}/message/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender_id: user.user_id,
+          receiver_id: selectedStaff.user_id,
+          content: messageContent.trim(),
+          status: 'unseen'
+        })
+      });
+
+      Toast.show({ type: 'success', text1: 'Sent', text2: 'Message sent successfully' });
+      setComposeVisible(false);
+      setMessageContent('');
+      setSelectedStaff(null);
+      fetchMessages();
+    } catch {
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to send message' });
+    }
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
       <StatusBar barStyle="dark-content" />
       <MessagesBackground />
 
-      {/* Header */}
       <View style={[styles.header, { backgroundColor: theme.headerBg, shadowColor: theme.headerShadow }]}>
         <Text style={[styles.title, { color: theme.title }]}>Messages</Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
-        {messages.map((msg, idx) => (
-          <TouchableOpacity
-            key={msg.id}
-            activeOpacity={0.94}
-            style={{ marginBottom: 18 }}
-            accessibilityRole="button"
-            accessibilityLabel={`Message from ${msg.sender}`}
-            onPress={() => Toast.show({
-              type: 'info',
-              text1: `Opening Message`,
-              text2: `From: ${msg.sender}`,
-              visibilityTime: 2000,
-            })}
-          >
-            <BlurView
-              tint="light"
-              intensity={theme.blurIntensity}
-              style={[styles.cardWrap, { shadowColor: theme.shadow }, shadowForIdx(idx)]}
-            >
-              <LinearGradient
-                colors={theme.cardGradient}
-                start={[0.4, 0]}
-                end={[1, 1]}
-                style={[styles.card, { backgroundColor: theme.cardBg }]}
+      {loading ? (
+        <ActivityIndicator size="large" color="#4e8cff" style={{ marginTop: 30 }} />
+      ) : (
+        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
+          {groupedMessages.length > 0 ? (
+            groupedMessages.map((group, idx) => (
+              <TouchableOpacity
+                key={group.senderId}
+                activeOpacity={0.94}
+                style={{ marginBottom: 18 }}
+                onPress={() => navigation.navigate('ChatScreen', { senderId: group.senderId, senderName: group.senderName })}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={[styles.cardTitle, { color: theme.cardTitle, flex: 1 }]}>
-                    From: {msg.sender}
-                  </Text>
-                  {msg.unread && (
-                    <View style={styles.dotAnimWrap}>
-                      <Animated.View style={[
-                        styles.dotAnim,
-                        { backgroundColor: theme.unreadDot }
-                      ]} />
+                <BlurView
+                  tint="light"
+                  intensity={theme.blurIntensity}
+                  style={[styles.cardWrap, { shadowColor: theme.shadow }, shadowForIdx(idx)]}
+                >
+                  <LinearGradient
+                    colors={theme.cardGradient}
+                    start={[0.4, 0]}
+                    end={[1, 1]}
+                    style={[styles.card, { backgroundColor: theme.cardBg }]}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={[styles.cardTitle, { color: theme.cardTitle, flex: 1 }]}>
+                        From: {group.senderName}
+                      </Text>
+                      <View style={styles.countBadge}>
+                        <Text style={styles.countText}>{group.count}</Text>
+                      </View>
                     </View>
-                  )}
-                </View>
-                <Text style={[styles.cardSub, { color: theme.cardSub }]}>
-                  {msg.preview}
-                </Text>
-              </LinearGradient>
-            </BlurView>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+                  </LinearGradient>
+                </BlurView>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <Text style={{ textAlign: 'center', color: '#666', fontSize: 16 }}>
+              No unseen messages.
+            </Text>
+          )}
+        </ScrollView>
+      )}
 
-      {/* FAB */}
       <Animated.View style={[
         styles.fab,
         {
@@ -116,24 +191,51 @@ export default function MessagesScreen() {
           onPressIn={handleFabPressIn}
           onPressOut={handleFabPressOut}
           activeOpacity={0.7}
-          accessibilityLabel="Compose new message"
         >
           <Text style={[styles.fabIcon, { color: theme.fabIcon }]}>✉️</Text>
         </TouchableOpacity>
       </Animated.View>
 
-      <Toast
-        position="top"
-        visibilityTime={2200}
-        topOffset={70}
-        autoHide
-        text1Style={{ color: theme.toastTitle, fontWeight: 'bold', fontSize: 18 }}
-        text2Style={{ color: theme.toastText, fontSize: 15 }}
-        style={{ backgroundColor: theme.toastBg, borderRadius: 14 }}
-      />
+      <Modal visible={composeVisible} transparent animationType="slide" onRequestClose={() => setComposeVisible(false)}>
+        <View style={modalStyles.modalBackground}>
+          <View style={modalStyles.modalContainer}>
+            <Text style={modalStyles.modalTitle}>Compose Message</Text>
+            <ScrollView style={{ maxHeight: 150 }}>
+              {staffList.map(staff => (
+                <TouchableOpacity
+                  key={staff.user_id}
+                  style={[
+                    modalStyles.receiverItem,
+                    selectedStaff?.user_id === staff.user_id && { backgroundColor: '#4e8cff33' }
+                  ]}
+                  onPress={() => setSelectedStaff(staff)}
+                >
+                  <Text style={{ fontSize: 16 }}>{staff.name} ({staff.role})</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TextInput
+              placeholder="Type your message..."
+              value={messageContent}
+              onChangeText={setMessageContent}
+              style={modalStyles.input}
+              multiline
+            />
+            <TouchableOpacity style={modalStyles.sendButton} onPress={sendMessage}>
+              <Text style={modalStyles.sendButtonText}>Send</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[modalStyles.sendButton, { backgroundColor: '#aaa' }]} onPress={() => setComposeVisible(false)}>
+              <Text style={modalStyles.sendButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Toast position="top" visibilityTime={2200} topOffset={70} autoHide />
     </View>
   );
 }
+
 
 function MessagesBackground() {
   return (
@@ -185,8 +287,6 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "gray",
     padding: 20,
     minHeight: 82,
     flexDirection: 'column',
@@ -197,25 +297,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 5,
   },
-  cardSub: {
-    fontSize: 16,
-    fontWeight: '400',
-    opacity: 0.85,
-  },
-  dotAnimWrap: {
-    marginLeft: 10,
-    alignSelf: 'center',
-    justifyContent: 'center',
+  countBadge: {
+    backgroundColor: '#4e8cff',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    minWidth: 24,
     alignItems: 'center',
   },
-  dotAnim: {
-    width: 13,
-    height: 13,
-    borderRadius: 7,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.45,
-    shadowRadius: 4,
-    elevation: 3,
+  countText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
   fab: {
     position: 'absolute',
@@ -237,6 +329,57 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+const modalStyles = StyleSheet.create({
+  modalBackground: {
+    flex: 1,
+    backgroundColor: '#0008',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#4e8cff',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  receiverItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#f2f2f2',
+    marginBottom: 6,
+  },
+  input: {
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    minHeight: 60,
+    marginTop: 10,
+    textAlignVertical: 'top',
+  },
+  sendButton: {
+    backgroundColor: '#4e8cff',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  sendButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+});
+
 
 const blobStyles = StyleSheet.create({
   blob: {
@@ -270,16 +413,13 @@ const lightTheme = {
   headerBg: '#fdfeffcc',
   headerShadow: '#4e8cff33',
   title: '#4e8cff',
-  text: '#2a3340',
   cardBg: 'rgba(255,255,255,0.82)',
   cardTitle: '#243358',
-  cardSub: '#4e8cff99',
   fabBg: '#4e8cff',
   fabShadow: '#4e8cff99',
   fabIcon: '#fff',
   blurIntensity: 20,
   shadow: '#4e8cff33',
-  unreadDot: '#4e8cff',
   cardGradient: ['#fff0', '#e3f0ff99'],
   toastBg: '#fff',
   toastTitle: '#4e8cff',
