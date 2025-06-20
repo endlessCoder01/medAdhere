@@ -1,15 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Platform, Animated, StatusBar, Dimensions, ActivityIndicator, Modal, TextInput
-} from 'react-native';
-import Toast from 'react-native-toast-message';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL } from '../../services/api';
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Platform,
+  Animated,
+  StatusBar,
+  Dimensions,
+  ActivityIndicator,
+  Modal,
+  TextInput,
+} from "react-native";
+import Toast from "react-native-toast-message";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_URL } from "../../services/api";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 export default function MessagesScreen({ navigation }) {
   const theme = lightTheme;
@@ -19,12 +29,12 @@ export default function MessagesScreen({ navigation }) {
   const [composeVisible, setComposeVisible] = useState(false);
   const [staffList, setStaffList] = useState([]);
   const [selectedStaff, setSelectedStaff] = useState(null);
-  const [messageContent, setMessageContent] = useState('');
+  const [messageContent, setMessageContent] = useState("");
 
   useEffect(() => {
     fetchMessages();
     fetchStaff();
-    const interval = setInterval(fetchMessages, 15000);
+    const interval = setInterval(fetchMessages, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -54,14 +64,14 @@ export default function MessagesScreen({ navigation }) {
 
   const fetchMessages = async () => {
     try {
-      const userData = await AsyncStorage.getItem('userInfo');
-      if (!userData) throw new Error('No user info');
+      const userData = await AsyncStorage.getItem("userInfo");
+      if (!userData) throw new Error("No user info");
       const user = JSON.parse(userData);
 
       const res = await fetch(`${API_URL}/message/${user.user_id}`);
       const messages = await res.json();
 
-      const unseen = messages.filter(m => m.status === 'unseen');
+      const unseen = messages.filter((m) => m.status === "unseen");
 
       const groups = {};
 
@@ -80,7 +90,40 @@ export default function MessagesScreen({ navigation }) {
 
       setGroupedMessages(Object.values(groups));
     } catch (e) {
-      Toast.show({ type: 'error', text1: 'Error', text2: e.message || 'Failed to load messages' });
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: e.message || "Failed to load messages",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateMessages = async (group) => {
+    try {
+      setLoading(true); // Start loading indicator
+      const userData = await AsyncStorage.getItem("userInfo");
+      if (!userData) throw new Error("No user info");
+      const user = JSON.parse(userData);
+
+      const res = await fetch(
+        `${API_URL}/message/chatUpdate/${group.senderId}/${user.user_id}`
+      );
+      if (res.ok) {
+        navigation.navigate("ChatScreen", {
+          senderId: group.senderId,
+          senderName: group.senderName,
+        });
+      } else {
+        throw new Error("Update failed");
+      }
+    } catch (e) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: e.message || "Failed to load messages",
+      });
     } finally {
       setLoading(false);
     }
@@ -92,38 +135,54 @@ export default function MessagesScreen({ navigation }) {
       const data = await res.json();
       setStaffList(data);
     } catch {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to load staff list' });
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to load staff list",
+      });
     }
   };
 
   const sendMessage = async () => {
     try {
       if (!selectedStaff || !messageContent.trim()) {
-        Toast.show({ type: 'error', text1: 'Error', text2: 'Select a receiver and write a message.' });
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: "Select a receiver and write a message.",
+        });
         return;
       }
 
-      const userData = await AsyncStorage.getItem('userInfo');
+      const userData = await AsyncStorage.getItem("userInfo");
       const user = JSON.parse(userData);
 
       await fetch(`${API_URL}/message/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sender_id: user.user_id,
           receiver_id: selectedStaff.user_id,
           content: messageContent.trim(),
-          status: 'unseen'
-        })
+          status: "unseen",
+        }),
       });
 
-      Toast.show({ type: 'success', text1: 'Sent', text2: 'Message sent successfully' });
+      Toast.show({
+        type: "success",
+        text1: "Sent",
+        text2: "Message sent successfully",
+      });
       setComposeVisible(false);
-      setMessageContent('');
+      setMessageContent("");
       setSelectedStaff(null);
       fetchMessages();
     } catch {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to send message' });
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to send message",
+      });
     }
   };
 
@@ -132,12 +191,21 @@ export default function MessagesScreen({ navigation }) {
       <StatusBar barStyle="dark-content" />
       <MessagesBackground />
 
-      <View style={[styles.header, { backgroundColor: theme.headerBg, shadowColor: theme.headerShadow }]}>
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: theme.headerBg, shadowColor: theme.headerShadow },
+        ]}
+      >
         <Text style={[styles.title, { color: theme.title }]}>Messages</Text>
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#4e8cff" style={{ marginTop: 30 }} />
+        <ActivityIndicator
+          size="large"
+          color="#4e8cff"
+          style={{ marginTop: 30 }}
+        />
       ) : (
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
           {groupedMessages.length > 0 ? (
@@ -146,12 +214,18 @@ export default function MessagesScreen({ navigation }) {
                 key={group.senderId}
                 activeOpacity={0.94}
                 style={{ marginBottom: 18 }}
-                onPress={() => navigation.navigate('ChatScreen', { senderId: group.senderId, senderName: group.senderName })}
+                onPress={() => {
+                  updateMessages(group);
+                }}
               >
                 <BlurView
                   tint="light"
                   intensity={theme.blurIntensity}
-                  style={[styles.cardWrap, { shadowColor: theme.shadow }, shadowForIdx(idx)]}
+                  style={[
+                    styles.cardWrap,
+                    { shadowColor: theme.shadow },
+                    shadowForIdx(idx),
+                  ]}
                 >
                   <LinearGradient
                     colors={theme.cardGradient}
@@ -159,8 +233,15 @@ export default function MessagesScreen({ navigation }) {
                     end={[1, 1]}
                     style={[styles.card, { backgroundColor: theme.cardBg }]}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={[styles.cardTitle, { color: theme.cardTitle, flex: 1 }]}>
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
+                      <Text
+                        style={[
+                          styles.cardTitle,
+                          { color: theme.cardTitle, flex: 1 },
+                        ]}
+                      >
                         From: {group.senderName}
                       </Text>
                       <View style={styles.countBadge}>
@@ -172,21 +253,23 @@ export default function MessagesScreen({ navigation }) {
               </TouchableOpacity>
             ))
           ) : (
-            <Text style={{ textAlign: 'center', color: '#666', fontSize: 16 }}>
+            <Text style={{ textAlign: "center", color: "#666", fontSize: 16 }}>
               No unseen messages.
             </Text>
           )}
         </ScrollView>
       )}
 
-      <Animated.View style={[
-        styles.fab,
-        {
-          backgroundColor: theme.fabBg,
-          shadowColor: theme.fabShadow,
-          transform: [{ scale: fabScale }],
-        }
-      ]}>
+      <Animated.View
+        style={[
+          styles.fab,
+          {
+            backgroundColor: theme.fabBg,
+            shadowColor: theme.fabShadow,
+            transform: [{ scale: fabScale }],
+          },
+        ]}
+      >
         <TouchableOpacity
           onPressIn={handleFabPressIn}
           onPressOut={handleFabPressOut}
@@ -196,21 +279,30 @@ export default function MessagesScreen({ navigation }) {
         </TouchableOpacity>
       </Animated.View>
 
-      <Modal visible={composeVisible} transparent animationType="slide" onRequestClose={() => setComposeVisible(false)}>
+      <Modal
+        visible={composeVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setComposeVisible(false)}
+      >
         <View style={modalStyles.modalBackground}>
           <View style={modalStyles.modalContainer}>
             <Text style={modalStyles.modalTitle}>Compose Message</Text>
             <ScrollView style={{ maxHeight: 150 }}>
-              {staffList.map(staff => (
+              {staffList.map((staff) => (
                 <TouchableOpacity
                   key={staff.user_id}
                   style={[
                     modalStyles.receiverItem,
-                    selectedStaff?.user_id === staff.user_id && { backgroundColor: '#4e8cff33' }
+                    selectedStaff?.user_id === staff.user_id && {
+                      backgroundColor: "#4e8cff33",
+                    },
                   ]}
                   onPress={() => setSelectedStaff(staff)}
                 >
-                  <Text style={{ fontSize: 16 }}>{staff.name} ({staff.role})</Text>
+                  <Text style={{ fontSize: 16 }}>
+                    {staff.name} ({staff.role})
+                  </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -221,10 +313,16 @@ export default function MessagesScreen({ navigation }) {
               style={modalStyles.input}
               multiline
             />
-            <TouchableOpacity style={modalStyles.sendButton} onPress={sendMessage}>
+            <TouchableOpacity
+              style={modalStyles.sendButton}
+              onPress={sendMessage}
+            >
               <Text style={modalStyles.sendButtonText}>Send</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[modalStyles.sendButton, { backgroundColor: '#aaa' }]} onPress={() => setComposeVisible(false)}>
+            <TouchableOpacity
+              style={[modalStyles.sendButton, { backgroundColor: "#aaa" }]}
+              onPress={() => setComposeVisible(false)}
+            >
               <Text style={modalStyles.sendButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -236,33 +334,54 @@ export default function MessagesScreen({ navigation }) {
   );
 }
 
-
 function MessagesBackground() {
   return (
     <View style={StyleSheet.absoluteFill}>
       <LinearGradient
-        colors={['#f7f8fa', '#cbe7ff', '#a3f2ca']}
+        colors={["#f7f8fa", "#cbe7ff", "#a3f2ca"]}
         start={[0.7, 0.5]}
         end={[1, 1]}
         style={StyleSheet.absoluteFill}
       />
-      <Animated.View style={[blobStyles.blob, blobStyles.blob1, { backgroundColor: "#4e8cff88" }]} />
-      <Animated.View style={[blobStyles.blob, blobStyles.blob2, { backgroundColor: "#1dc48b77" }]} />
-      <Animated.View style={[blobStyles.blob, blobStyles.blob3, { backgroundColor: "#e03d3d66" }]} />
+      <Animated.View
+        style={[
+          blobStyles.blob,
+          blobStyles.blob1,
+          { backgroundColor: "#4e8cff88" },
+        ]}
+      />
+      <Animated.View
+        style={[
+          blobStyles.blob,
+          blobStyles.blob2,
+          { backgroundColor: "#1dc48b77" },
+        ]}
+      />
+      <Animated.View
+        style={[
+          blobStyles.blob,
+          blobStyles.blob3,
+          { backgroundColor: "#e03d3d66" },
+        ]}
+      />
     </View>
   );
 }
 
 function shadowForIdx(idx) {
   const offsets = [
-    { x: 0, y: 8 }, { x: 0, y: 9 }, { x: 0, y: 7 }, { x: 0, y: 6 }, { x: 0, y: 10 }
+    { x: 0, y: 8 },
+    { x: 0, y: 9 },
+    { x: 0, y: 7 },
+    { x: 0, y: 6 },
+    { x: 0, y: 10 },
   ];
   return { shadowOffset: offsets[idx % offsets.length] };
 }
 
 const styles = StyleSheet.create({
   header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 15,
+    paddingTop: Platform.OS === "ios" ? 60 : 15,
     paddingBottom: 16,
     paddingHorizontal: 20,
     flexDirection: "row",
@@ -275,12 +394,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 30,
-    fontWeight: '900',
+    fontWeight: "900",
     letterSpacing: -1,
   },
   cardWrap: {
     borderRadius: 18,
-    overflow: 'hidden',
+    overflow: "hidden",
     shadowOpacity: 0.13,
     shadowRadius: 16,
     elevation: 6,
@@ -289,35 +408,35 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 20,
     minHeight: 82,
-    flexDirection: 'column',
-    justifyContent: 'center',
+    flexDirection: "column",
+    justifyContent: "center",
   },
   cardTitle: {
     fontSize: 19,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 5,
   },
   countBadge: {
-    backgroundColor: '#4e8cff',
+    backgroundColor: "#4e8cff",
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 2,
     minWidth: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   countText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: "#fff",
+    fontWeight: "bold",
   },
   fab: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 34,
     right: 34,
     width: 62,
     height: 62,
     borderRadius: 31,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     elevation: 11,
     shadowOffset: { width: 0, height: 9 },
     shadowOpacity: 0.28,
@@ -325,65 +444,64 @@ const styles = StyleSheet.create({
   },
   fabIcon: {
     fontSize: 34,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontWeight: "bold",
+    textAlign: "center",
   },
 });
 
 const modalStyles = StyleSheet.create({
   modalBackground: {
     flex: 1,
-    backgroundColor: '#0008',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#0008",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContainer: {
-    width: '85%',
-    backgroundColor: '#fff',
+    width: "85%",
+    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 20,
   },
   modalTitle: {
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#4e8cff',
+    fontWeight: "bold",
+    color: "#4e8cff",
     marginBottom: 10,
-    textAlign: 'center',
+    textAlign: "center",
   },
   receiverItem: {
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#f2f2f2',
+    backgroundColor: "#f2f2f2",
     marginBottom: 6,
   },
   input: {
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderWidth: 1,
     borderRadius: 8,
     padding: 10,
     minHeight: 60,
     marginTop: 10,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   sendButton: {
-    backgroundColor: '#4e8cff',
+    backgroundColor: "#4e8cff",
     padding: 12,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 10,
   },
   sendButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: "#fff",
+    fontWeight: "bold",
     fontSize: 16,
   },
 });
 
-
 const blobStyles = StyleSheet.create({
   blob: {
-    position: 'absolute',
+    position: "absolute",
     opacity: 0.33,
     borderRadius: 100,
     zIndex: 0,
@@ -409,19 +527,19 @@ const blobStyles = StyleSheet.create({
 });
 
 const lightTheme = {
-  bg: '#f7f8fa',
-  headerBg: '#fdfeffcc',
-  headerShadow: '#4e8cff33',
-  title: '#4e8cff',
-  cardBg: 'rgba(255,255,255,0.82)',
-  cardTitle: '#243358',
-  fabBg: '#4e8cff',
-  fabShadow: '#4e8cff99',
-  fabIcon: '#fff',
+  bg: "#f7f8fa",
+  headerBg: "#fdfeffcc",
+  headerShadow: "#4e8cff33",
+  title: "#4e8cff",
+  cardBg: "rgba(255,255,255,0.82)",
+  cardTitle: "#243358",
+  fabBg: "#4e8cff",
+  fabShadow: "#4e8cff99",
+  fabIcon: "#fff",
   blurIntensity: 20,
-  shadow: '#4e8cff33',
-  cardGradient: ['#fff0', '#e3f0ff99'],
-  toastBg: '#fff',
-  toastTitle: '#4e8cff',
-  toastText: '#243358',
+  shadow: "#4e8cff33",
+  cardGradient: ["#fff0", "#e3f0ff99"],
+  toastBg: "#fff",
+  toastTitle: "#4e8cff",
+  toastText: "#243358",
 };

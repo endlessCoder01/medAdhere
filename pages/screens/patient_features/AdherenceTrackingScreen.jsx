@@ -18,6 +18,8 @@ export default function AdherenceTrackingScreen() {
 
   useEffect(() => {
     fetchData();
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchData = async () => {
