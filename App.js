@@ -8,6 +8,7 @@ import DoctorHomeScreen from "./pages/screens/dashboards/DoctorHomescreen";
 import PatientHomeScreen from "./pages/screens/dashboards/PatientHomeScreen";
 import CaregiverHomeScreen from "./pages/screens/dashboards/CaregiverHomeScreen";
 import PharmacistHomeScreen from "./pages/screens/dashboards/PharmacistHomeScreen";
+import AddReminderScreen from "./pages/components/AddReminder"
 
 import Toast from 'react-native-toast-message';
 
@@ -27,6 +28,7 @@ export default function App() {
       <Stack.Screen name="PatientHome" component={PatientHomeScreen} />
       <Stack.Screen name="CaregiverHome" component={CaregiverHomeScreen} />
       <Stack.Screen name="PharmacistHome" component={PharmacistHomeScreen} />
+      <Stack.Screen name="AddReminder" component={AddReminderScreen} />
       </Stack.Navigator>
       </NavigationContainer>
       <Toast />

@@ -2,8 +2,21 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import Toast from 'react-native-toast-message';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
+
+
+import MedicationScheduleScreen from '../patient_features/MedicationScheduleScreen';
+import AdherenceTrackingScreen from '../patient_features/AdherenceTrackingScreen';
+import EducationalResourcesScreen from '../patient_features/EducationalResourcesScreen';
+import RemindersScreen from '../patient_features/RemindersScreen';
+import MessagesScreen from '../shared/MessagesScreen';
+
+const Tab = createBottomTabNavigator();
+
 
 const PatientHomeScreen = () => {
+  
   const medications = [
     { id: 1, name: 'Aspirin 100mg', schedule: 'Once daily - Morning' },
     { id: 2, name: 'Metformin 500mg', schedule: 'Twice daily - Morning & Evening' },
@@ -22,35 +35,52 @@ const PatientHomeScreen = () => {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Welcome, Patient</Text>
-      <Text style={styles.subtitle}>Your Medications</Text>
-
-      {medications.map((med) => (
-        <TouchableOpacity
-          key={med.id}
-          style={styles.card}
-          onPress={() => {
-            Toast.show({
-              type: 'info',
-              text1: 'Dose Recorded',
-              text2: `You marked ${med.name} as taken.`,
-            });
-          }}
-        >
-          <Text style={styles.cardTitle}>{med.name}</Text>
-          <Text style={styles.cardSub}>{med.schedule}</Text>
-        </TouchableOpacity>
-      ))}
+  <ScrollView contentContainerStyle={styles.container}>
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarIcon: ({ color, size }) => {
+          let iconName;
+          switch (route.name) {
+            case 'Schedule':
+              iconName = 'medkit';
+              break;
+            case 'Adherence':
+              iconName = 'checkmark-circle';
+              break;
+            case 'Resources':
+              iconName = 'book';
+              break;
+            case 'Reminders':
+              iconName = 'alarm';
+              break;
+            case 'Messages':
+              iconName = 'chatbubble';
+              break;
+            default:
+              iconName = 'ellipse';
+          }
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+      })}
+    >
+      <Tab.Screen name="Schedule" component={MedicationScheduleScreen} />
+      <Tab.Screen name="Adherence" component={AdherenceTrackingScreen} />
+      <Tab.Screen name="Resources" component={EducationalResourcesScreen} />
+      <Tab.Screen name="Reminders" component={RemindersScreen} />
+      <Tab.Screen name="Messages" component={MessagesScreen} />
+    </Tab.Navigator>
 
       <Toast position="top" />
+
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    paddingTop: 20,
+    // padding: 20,
     backgroundColor: '#f7f8fa',
     flexGrow: 1,
   },
