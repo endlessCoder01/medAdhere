@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import Toast from 'react-native-toast-message';
+import { API_URL } from '../services/api';
 
 const EditMedicationScreen = ({ route, navigation }) => {
   const { medicationId } = route.params;
@@ -13,7 +14,7 @@ const EditMedicationScreen = ({ route, navigation }) => {
 
   const fetchMedication = async () => {
     try {
-      const res = await fetch(`http://localhost:3001/medication/`);
+      const res = await fetch(`${API_URL}/medication/`);
       const data = await res.json();
       const med = data.find(m => m.medication_id === medicationId);
       if (med) {
@@ -35,7 +36,7 @@ const EditMedicationScreen = ({ route, navigation }) => {
       return;
     }
     try {
-      await fetch(`http://localhost:3001/medication/${medicationId}`, {
+      await fetch(`${API_URL}/medication/${medicationId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(medication),

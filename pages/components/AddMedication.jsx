@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import Toast from 'react-native-toast-message';
+import { API_URL } from '../services/api';
 
 const AddMedicationScreen = ({ navigation }) => {
   const [medication, setMedication] = useState({
@@ -15,7 +16,7 @@ const AddMedicationScreen = ({ navigation }) => {
     }
 
     try {
-      await fetch(`http://localhost:3001/medication/`, {
+      await fetch(`${API_URL}/medication/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(medication),

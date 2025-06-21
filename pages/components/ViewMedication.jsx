@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import Toast from 'react-native-toast-message';
+import { API_URL } from '../services/api';
 
 const ViewMedicationScreen = ({ route, navigation }) => {
   const { medicationId, patientId } = route.params || {};
@@ -13,7 +14,7 @@ const ViewMedicationScreen = ({ route, navigation }) => {
 
   const fetchMedication = async () => {
     try {
-      const res = await fetch(`http://localhost:3001/medication/`);
+      const res = await fetch(`${API_URL}/medication/`);
       const data = await res.json();
 
       let med = null;

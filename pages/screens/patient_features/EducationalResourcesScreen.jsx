@@ -1,5 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Dimensions,
+  Linking
+} from 'react-native';
 import Toast from 'react-native-toast-message';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,10 +16,22 @@ const { width } = Dimensions.get('window');
 
 const EducationalResourcesScreen = () => {
   const resources = [
-    { id: 1, title: 'Understanding Hypertension', type: 'Article' },
-    { id: 2, title: 'How to take Metformin', type: 'Video' },
-    { id: 3, title: 'Healthy Eating for Diabetes', type: 'Tutorial' },
+    { id: 1, title: 'Understanding Hypertension', type: 'Article', url: 'https://www.youtube.com/watch?v=Ek4FG-xVw7E&t=42s' },
+    { id: 2, title: 'How to take Metformin', type: 'Video', url: 'https://www.youtube.com/watch?v=vvadWYNhqCc' },
+    { id: 3, title: 'Healthy Eating for Diabetes', type: 'Tutorial', url: 'https://www.youtube.com/watch?v=3Euu8d8CHmQ&t=67s' },
+    { id: 4, title: 'Medication Safety Tips', type: 'Video', url: 'https://www.youtube.com/watch?v=V5xuuNOh72w' },
+    { id: 5, title: 'Medication Adherence Guide', type: 'Web', url: 'https://www.bing.com/search?pglt=2083&q=medication+adherence&cvid=50e3d6bbadbe49e3a83ded4a31f0224b&gs_lcrp=EgRlZGdlKgYIABBFGDkyBggAEEUYOTIGCAEQABhAMgYIAhAAGEAyBggDEAAYQDIGCAQQABhAMgYIBRAAGEAyBggGEAAYQDIGCAcQABhAMgYICBAAGEDSAQkxMjgwN2owajGoAgCwAgE&FORM=ANSPA1&PC=U531' }
   ];
+
+  const handleOpen = (res) => {
+    Linking.openURL(res.url).catch(() => {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Could not open link.'
+      });
+    });
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f7f8fa' }}>
@@ -34,11 +54,14 @@ const EducationalResourcesScreen = () => {
               style={styles.card}
             >
               <TouchableOpacity
-                onPress={() => Toast.show({
-                  type: 'info',
-                  text1: 'Opening Resource',
-                  text2: `${res.title} (${res.type})`,
-                })}
+                onPress={() => {
+                  Toast.show({
+                    type: 'info',
+                    text1: 'Opening Resource',
+                    text2: `${res.title} (${res.type})`
+                  });
+                  handleOpen(res);
+                }}
                 activeOpacity={0.8}
               >
                 <Text style={styles.cardTitle}>{res.title}</Text>

@@ -15,9 +15,9 @@ const PharmacistFeaturesScreen = () => {
   const fetchData = async () => {
     try {
       const [medRes, patRes, userRes] = await Promise.all([
-        fetch('http://localhost:3001/medication/'),
-        fetch('http://localhost:3001/patient/'),
-        fetch('http://localhost:3001/user/')
+        fetch(`${API_URL}/medication/`),
+        fetch(`${API_URL}/patient/`),
+        fetch(`${API_URL}/user/`)
       ]);
       setMedications(await medRes.json());
       setPatients(await patRes.json());

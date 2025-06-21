@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import Toast from 'react-native-toast-message';
+import { API_URL } from '../../services/api';
 
 const CaregiverFeaturesScreen = () => {
   const [patients, setPatients] = useState([]);
@@ -14,8 +15,8 @@ const CaregiverFeaturesScreen = () => {
   const fetchData = async () => {
     try {
       const [patRes, userRes] = await Promise.all([
-        fetch('http://localhost:3001/patient/'),
-        fetch('http://localhost:3001/user/')
+        fetch(`${API_URL}/patient/`),
+        fetch(`${API_URL}/user/`)
       ]);
       setPatients(await patRes.json());
       setUsers(await userRes.json());
