@@ -13,7 +13,7 @@ const SignupScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [language_pref,setLanguage_pref] = useState();
+  const [language_pref,setLanguage_pref] = useState('english');
   const [phone,setPhone] = useState();
 
   const handleSignup = async () => {

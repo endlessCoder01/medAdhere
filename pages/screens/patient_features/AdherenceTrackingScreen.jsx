@@ -8,6 +8,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../../services/api';
+import { LineChart } from 'react-native-chart-kit';
+import RNHTMLtoPDF from 'react-native-html-to-pdf';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+
 
 const { width } = Dimensions.get('window');
 
@@ -15,6 +20,7 @@ export default function AdherenceTrackingScreen() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [weeklyData, setWeeklyData] = useState({ dates: [], counts: [] });
 
   useEffect(() => {
     fetchData();
@@ -52,12 +58,70 @@ export default function AdherenceTrackingScreen() {
       }
 
       setRecords(allRecords);
+      computeWeeklyData(allRecords);
     } catch (e) {
       Toast.show({ type: 'error', text1: 'Error', text2: e.message || 'Failed to load data' });
     } finally {
       setLoading(false);
     }
   };
+
+   const computeWeeklyData = (allRecords) => {
+    const map = {};
+    const today = new Date();
+    let currentMonth = today.toLocaleString('default', { month: 'long' });
+
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(today.getDate() - i);
+      const day = date.getDate().toString();
+      const dateStr = date.toLocaleDateString();
+      map[dateStr] = { day, count: 0 };
+      currentMonth = date.toLocaleString('default', { month: 'long' });
+    }
+
+    allRecords.forEach(r => {
+      const dateStr = new Date(r.taken_at).toLocaleDateString();
+      if (map[dateStr] && r.status.toLowerCase() === 'taken') {
+        map[dateStr].count++;
+      }
+    });
+
+    setWeeklyData({
+      days: Object.values(map).map(v => v.day),
+      counts: Object.values(map).map(v => v.count),
+      month: currentMonth
+    });
+
+  }
+
+
+const generatePDF = async () => {
+  try {
+    const htmlContent = `
+      <h1>Weekly Adherence Report</h1>
+      <ul>
+        ${records.map(r => `
+          <li>${r.medication_name} - ${r.status} on ${new Date(r.taken_at).toLocaleString()}</li>
+        `).join('')}
+      </ul>
+    `;
+
+    const { uri } = await Print.printToFileAsync({ html: htmlContent });
+    console.log('PDF saved to:', uri);
+    Toast.show({ type: 'success', text1: 'PDF Generated', text2: 'Ready to share!' });
+
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(uri);
+    } else {
+      Toast.show({ type: 'info', text1: 'No sharing available', text2: 'PDF saved at ' + uri });
+    }
+
+  } catch (e) {
+    console.log(e);
+    Toast.show({ type: 'error', text1: 'Error', text2: 'PDF generation failed' });
+  }
+};
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f7f8fa' }}>
@@ -67,31 +131,62 @@ export default function AdherenceTrackingScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Adherence Tracking</Text>
       </View>
+{loading ? (
+  <ActivityIndicator size="large" color="#4e8cff" style={{ marginTop: 30 }} />
+) : (
+  <View style={{ flex: 1 }}>
+    <View style={{ padding: 20 }}>
+      <Text style={{ textAlign: 'center', fontSize: 14, fontWeight: "bold", color: '#243358', marginBottom: 4 }}>
+        {weeklyData.month}
+      </Text>
 
-      {loading ? (
-        <ActivityIndicator size="large" color="#4e8cff" style={{ marginTop: 30 }} />
-      ) : (
-        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
-          {records.map((rec, idx) => (
-            <TouchableOpacity key={rec.record_id} onPress={() => setSelectedRecord(rec)}>
-              <BlurView intensity={15} tint="light" style={[styles.cardWrap]}>
-                <LinearGradient
-                  colors={['#fff0', '#e3f0ff99']}
-                  start={[0.5, 0]}
-                  end={[1, 1]}
-                  style={styles.card}
-                >
-                  <Text style={styles.cardTitle}>{rec.medication_name}</Text>
-                  <Text style={styles.cardSub}>{new Date(rec.taken_at).toLocaleDateString()}</Text>
-                  <StatusChip status={rec.status} />
-                </LinearGradient>
-              </BlurView>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
+      <LineChart
+        data={{
+          labels: weeklyData.days,
+          datasets: [{ data: weeklyData.counts }]
+        }}
+        width={width - 40}
+        height={220}
+        yAxisLabel=""
+        chartConfig={{
+          backgroundColor: "#f7f8fa",
+          backgroundGradientFrom: "#cbe7ff",
+          backgroundGradientTo: "#a3f2ca",
+          decimalPlaces: 0,
+          color: (opacity = 1) => `rgba(78, 140, 255, ${opacity})`,
+          labelColor: () => "#243358",
+        }}
+        style={{ borderRadius: 16, marginBottom: 10 }}
+      />
 
-      {/* Modal for details */}
+      <TouchableOpacity style={styles.pdfButton} onPress={generatePDF}>
+        <Text style={styles.pdfButtonText}>Download PDF Report</Text>
+      </TouchableOpacity>
+    </View>
+
+    <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 150 }}>
+      {records.map((rec) => (
+        <TouchableOpacity key={rec.record_id} onPress={() => setSelectedRecord(rec)}>
+          <BlurView intensity={15} tint="light" style={styles.cardWrap}>
+            <LinearGradient
+              colors={['#fff0', '#e3f0ff99']}
+              start={[0.5, 0]}
+              end={[1, 1]}
+              style={styles.card}
+            >
+              <Text style={styles.cardTitle}>{rec.medication_name}</Text>
+              <Text style={styles.cardSub}>{new Date(rec.taken_at).toLocaleDateString()}</Text>
+              <StatusChip status={rec.status} />
+            </LinearGradient>
+          </BlurView>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+  </View>
+)}
+
+
+      {/* Modal code as before */}
       <Modal
         visible={!!selectedRecord}
         transparent
@@ -124,6 +219,25 @@ export default function AdherenceTrackingScreen() {
   );
 }
 
+
+
+// Background blobs
+function BackgroundBlobs() {
+  return (
+    <View style={StyleSheet.absoluteFill}>
+      <LinearGradient
+        colors={['#f7f8fa', '#cbe7ff', '#a3f2ca']}
+        start={[0.7, 0.5]}
+        end={[1, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={[blobStyles.blob, blobStyles.blob1, { backgroundColor: "#4e8cff77" }]} />
+      <View style={[blobStyles.blob, blobStyles.blob2, { backgroundColor: "#1dc48b66" }]} />
+      <View style={[blobStyles.blob, blobStyles.blob3, { backgroundColor: "#e03d3d55" }]} />
+    </View>
+  );
+}
+
 // Status chip
 function StatusChip({ status }) {
   const isTaken = status.toLowerCase() === "taken";
@@ -145,22 +259,6 @@ function StatusChip({ status }) {
   );
 }
 
-// Background blobs
-function BackgroundBlobs() {
-  return (
-    <View style={StyleSheet.absoluteFill}>
-      <LinearGradient
-        colors={['#f7f8fa', '#cbe7ff', '#a3f2ca']}
-        start={[0.7, 0.5]}
-        end={[1, 1]}
-        style={StyleSheet.absoluteFill}
-      />
-      <View style={[blobStyles.blob, blobStyles.blob1, { backgroundColor: "#4e8cff77" }]} />
-      <View style={[blobStyles.blob, blobStyles.blob2, { backgroundColor: "#1dc48b66" }]} />
-      <View style={[blobStyles.blob, blobStyles.blob3, { backgroundColor: "#e03d3d55" }]} />
-    </View>
-  );
-}
 
 // Styles
 const styles = StyleSheet.create({
@@ -171,6 +269,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+    pdfButton: {
+    backgroundColor: '#4e8cff',
+    padding: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  pdfButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   title: {
     fontSize: 30,
