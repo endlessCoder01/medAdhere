@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import PharmacistFeaturesScreen from '../caregiver_doc_pharm_features/PharmacistFeaturesScreen';
 import MessagesScreen from '../shared/MessagesScreen';
+import ReportsScreen from '../shared/Reports';
+import SettingsScreen from '../shared/Settings';
 
 const Tab = createBottomTabNavigator();
 
@@ -31,6 +33,7 @@ const PharmacistHomeScreen = () => {
             let iconName;
             if (route.name === 'Medications') iconName = 'medkit';
             else if (route.name === 'Messages') iconName = 'chatbubble';
+            else if (route.name === 'Reports') iconName = 'book';
             else if (route.name === 'Settings') iconName = 'settings';
             else iconName = 'ellipse';
             return <Ionicons name={iconName} size={size} color={color} />;
@@ -38,7 +41,9 @@ const PharmacistHomeScreen = () => {
         })}
       >
         <Tab.Screen name="Medications" component={PharmacistFeaturesScreen} />
+        <Tab.Screen name="Reports" component={ReportsScreen} />
         <Tab.Screen name="Messages" component={MessagesScreen} />
+        <Tab.Screen name="Settings" component={SettingsScreen} />
       </Tab.Navigator>
       <Toast position="top" />
     </>

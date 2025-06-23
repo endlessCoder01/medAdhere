@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DoctorFeaturesScreen from '../caregiver_doc_pharm_features/DoctorFeaturesScreen';
 import MessagesScreen from '../shared/MessagesScreen';
 import SettingsScreen from '../shared/Settings';
+import ReportsScreen from '../shared/Reports';
 
 const Tab = createBottomTabNavigator();
 
@@ -33,12 +34,14 @@ const DoctorHomeScreen = () => {
             if (route.name === 'Patients') iconName = 'people';
             else if (route.name === 'Messages') iconName = 'chatbubble';
             else if (route.name === 'Settings') iconName = 'settings';
+            else if (route.name === 'Reports') iconName = 'book';
             else iconName = 'ellipse';
             return <Ionicons name={iconName} size={size} color={color} />;
           },
         })}
       >
         <Tab.Screen name="Patients" component={DoctorFeaturesScreen} />
+        <Tab.Screen name="Reports" component={ReportsScreen} />
         <Tab.Screen name="Messages" component={MessagesScreen} />
         <Tab.Screen name="Settings" component={SettingsScreen} />
       </Tab.Navigator>
