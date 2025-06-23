@@ -80,7 +80,7 @@ export default function RemindersScreen() {
   const sendNotification = async (title, body) => {
     await Notifications.scheduleNotificationAsync({
       content: { title, body },
-      trigger: null,
+      trigger: { seconds: 1 },
     });
   };
 

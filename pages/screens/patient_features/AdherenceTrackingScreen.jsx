@@ -95,7 +95,6 @@ export default function AdherenceTrackingScreen() {
 
   }
 
-
 const generatePDF = async () => {
   try {
     const htmlContent = `

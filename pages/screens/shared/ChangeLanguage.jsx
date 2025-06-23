@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Toast from 'react-native-toast-message';
+import { API_URL } from '../../services/api';
 
 const ChangeLanguageScreen = ({ navigation, route }) => {
   const { user } = route.params;
@@ -8,7 +9,7 @@ const ChangeLanguageScreen = ({ navigation, route }) => {
 
   const saveLanguage = async () => {
     try {
-      await fetch(`http://localhost:3001/user/${user.user_id}`, {
+      await fetch(`${API_URL}/user/${user.user_id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ language_pref: selectedLang }),

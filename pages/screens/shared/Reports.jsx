@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity
 import Toast from 'react-native-toast-message';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { API_URL } from '../../services/api';
 
 const ReportsScreen = () => {
   const [reportData, setReportData] = useState([]);
@@ -22,9 +23,9 @@ const ReportsScreen = () => {
   const fetchReportData = async () => {
     try {
       const [userRes, medRes, adhRes] = await Promise.all([
-        fetch('http://localhost:3001/user/'),
-        fetch('http://localhost:3001/medication/'),
-        fetch('http://localhost:3001/adherence/'),
+        fetch(`${API_URL}/user/`),
+        fetch(`${API_URL}/medication/`),
+        fetch(`${API_URL}/adherence/`),
       ]);
 
       const users = await userRes.json();
